@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Natural Drawer Backpack</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #ffffff;
+        cursor: grab;
+        user-select: none;
+      }
+
+      body:active {
+        cursor: grabbing;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <script type="module">
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xffffff);
+
+      const camera = new THREE.PerspectiveCamera(
+        42,
+        innerWidth / innerHeight,
+        0.1,
+        100,
+      );
+      camera.position.set(3.6, 2.45, 4.65);
+
+      const renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('canvas'),
+        antialias: true,
+        alpha: false,
+      });
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.enablePan = false;
+      controls.target.set(0, 1.34, 0);
+      controls.minDistance = 3.4;
+      controls.maxDistance = 7.5;
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0xd6d6d6, 2.25));
+
+      const keyLight = new THREE.DirectionalLight(0xffffff, 2.1);
+      keyLight.position.set(4, 5, 5);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0xffffff, 1.1);
+      fillLight.position.set(-4, 3, -5);
+      scene.add(fillLight);
+
+      const backpack = new THREE.Group();
+      backpack.position.y = -1.35;
+      scene.add(backpack);
+
+      const W = 2.25;
+      const H = 2.95;
+      const D = 1.36;
+      const WALL = 0.055;
+      const FRONT_D = 0.52;
+      const BACK_D = D - FRONT_D;
+      const Z_DIV = D / 2 - FRONT_D;
+      const LID_D = FRONT_D - 0.02;
+      const Z_HINGE = D / 2 - LID_D;
+
+      const matBag = new THREE.MeshStandardMaterial({
+        color: 0x090909,
+        roughness: 0.86,
+        metalness: 0.02,
+      });
+      const matBagSoft = new THREE.MeshStandardMaterial({
+        color: 0x151515,
+        roughness: 0.9,
+        metalness: 0.01,
+      });
+      const matPanel = new THREE.MeshStandardMaterial({
+        color: 0x202020,
+        roughness: 0.88,
+        metalness: 0.01,
+      });
+      const matStitch = new THREE.MeshStandardMaterial({
+        color: 0x4a4a4a,
+        roughness: 0.95,
+      });
+      const matMetal = new THREE.MeshStandardMaterial({
+        color: 0xbfc3c8,
+        roughness: 0.32,
+        metalness: 0.72,
+      });
+
+      const matGlass = new THREE.MeshPhysicalMaterial({
+        color: 0xdff7ff,
+        transparent: true,
+        opacity: 0.28,
+        roughness: 0.02,
+        metalness: 0,
+        transmission: 0.92,
+        thickness: 0.08,
+        ior: 1.45,
+        clearcoat: 1,
+        clearcoatRoughness: 0.03,
+        side: THREE.DoubleSide,
+      });
+
+      const matGlassEdge = new THREE.LineBasicMaterial({
+        color: 0x8fd8ff,
+        transparent: true,
+        opacity: 0.86,
+      });
+
+      const clickables = [];
+      const drawerRows = [];
+
+      const state = {
+        coverOpen: false,
+        lidOpen: false,
+        drawersOpen: [false, false, false],
+      };
+
+      function roundedBox(w, h, d, radius = 0.04, segments = 4) {
+        return new RoundedBoxGeometry(w, h, d, segments, radius);
+      }
+
+      function makeMesh(geo, mat, x = 0, y = 0, z = 0) {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(x, y, z);
+        return m;
+      }
+
+      function addClick(obj, type, index = null) {
+        obj.userData.type = type;
+        if (index !== null) obj.userData.index = index;
+        clickables.push(obj);
+        return obj;
+      }
+
+      function makeTube(points, radius, mat, closed = false) {
+        const curve = new THREE.CatmullRomCurve3(points, closed);
+        return new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 80, radius, 12, closed),
+          mat,
+        );
+      }
+
+      function addEdges(target, colorMat = matGlassEdge) {
+        const edges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(target.geometry),
+          colorMat,
+        );
+        edges.position.copy(target.position);
+        edges.rotation.copy(target.rotation);
+        edges.scale.copy(target.scale);
+        target.parent.add(edges);
+        return edges;
+      }
+
+      const shell = new THREE.Group();
+      backpack.add(shell);
+
+      const bottom = makeMesh(
+        roundedBox(W * 0.92, WALL, D * 0.94, 0.055),
+        matBag,
+        0,
+        WALL / 2,
+        0,
+      );
+      shell.add(bottom);
+
+      const leftSide = makeMesh(
+        roundedBox(WALL, H * 0.92, D * 0.94, 0.055),
+        matBag,
+        -W / 2 + WALL / 2,
+        H / 2,
+        0,
+      );
+      const rightSide = makeMesh(
+        roundedBox(WALL, H * 0.92, D * 0.94, 0.055),
+        matBag,
+        W / 2 - WALL / 2,
+        H / 2,
+        0,
+      );
+      shell.add(leftSide, rightSide);
+
+      const frontFace = addClick(
+        makeMesh(
+          roundedBox(W * 0.98, H, WALL, 0.16, 6),
+          matBag,
+          0,
+          H / 2,
+          D / 2 - WALL / 2,
+        ),
+        'lid',
+      );
+      shell.add(frontFace);
+
+      const rearTopDepth = D - LID_D;
+      const topRear = makeMesh(
+        roundedBox(W * 0.9, WALL, rearTopDepth, 0.08),
+        matBag,
+        0,
+        H - WALL / 2,
+        -D / 2 + rearTopDepth / 2,
+      );
+      shell.add(topRear);
+
+      const divider = makeMesh(
+        new THREE.BoxGeometry(W - WALL * 2, H - WALL * 2, 0.03),
+        matBagSoft,
+        0,
+        H / 2,
+        Z_DIV,
+      );
+      shell.add(divider);
+
+      const sideSeamL = makeTube(
+        [
+          new THREE.Vector3(-W / 2 - 0.005, 0.34, D / 2 + 0.012),
+          new THREE.Vector3(-W / 2 - 0.01, H * 0.42, D / 2 + 0.014),
+          new THREE.Vector3(-W / 2 + 0.08, H * 0.83, D / 2 + 0.014),
+        ],
+        0.011,
+        matStitch,
+      );
+      const sideSeamR = sideSeamL.clone();
+      sideSeamR.scale.x = -1;
+      shell.add(sideSeamL, sideSeamR);
+
+      const lidGroup = new THREE.Group();
+      lidGroup.position.set(0, H, Z_HINGE);
+      shell.add(lidGroup);
+
+      const lid = addClick(
+        makeMesh(
+          roundedBox(W * 0.98, WALL, LID_D, 0.08),
+          matBag,
+          0,
+          -WALL / 2,
+          LID_D / 2,
+        ),
+        'lid',
+      );
+      lidGroup.add(lid);
+
+      function zipperTooth(x, y, z, parent) {
+        const t = makeMesh(
+          new THREE.BoxGeometry(0.032, 0.021, 0.026),
+          matMetal,
+          x,
+          y,
+          z,
+        );
+        parent.add(t);
+        return t;
+      }
+
+      for (let x = -W * 0.42; x <= W * 0.42; x += 0.06)
+        zipperTooth(x, -WALL / 2 - 0.004, LID_D + 0.015, lidGroup);
+      for (let z = 0.05; z <= LID_D - 0.03; z += 0.06) {
+        zipperTooth(-W / 2 - 0.008, -WALL / 2 - 0.004, z, lidGroup);
+        zipperTooth(W / 2 + 0.008, -WALL / 2 - 0.004, z, lidGroup);
+      }
+
+      function makePull() {
+        const g = new THREE.Group();
+        g.add(
+          makeMesh(
+            new THREE.BoxGeometry(0.105, 0.08, 0.055),
+            matMetal,
+            0,
+            0,
+            0,
+          ),
+        );
+        g.add(
+          makeMesh(
+            new THREE.BoxGeometry(0.055, 0.15, 0.016),
+            matMetal,
+            0,
+            -0.115,
+            0,
+          ),
+        );
+        return g;
+      }
+
+      const pullL = makePull();
+      pullL.position.set(-W * 0.38, -WALL / 2 - 0.052, LID_D + 0.036);
+      lidGroup.add(pullL);
+
+      const pullR = makePull();
+      pullR.position.set(W * 0.38, -WALL / 2 - 0.052, LID_D + 0.036);
+      lidGroup.add(pullR);
+
+      const pocket = makeMesh(
+        roundedBox(W * 0.58, H * 0.31, 0.045, 0.075),
+        matPanel,
+        0,
+        H * 0.32,
+        D / 2 + 0.026,
+      );
+      shell.add(pocket);
+
+      const pocketZip = makeMesh(
+        new THREE.BoxGeometry(W * 0.48, 0.032, 0.017),
+        matMetal,
+        0,
+        H * 0.46,
+        D / 2 + 0.055,
+      );
+      shell.add(pocketZip);
+
+      const pocketPull = makePull();
+      pocketPull.scale.setScalar(0.75);
+      pocketPull.position.set(W * 0.2, H * 0.46, D / 2 + 0.068);
+      shell.add(pocketPull);
+
+      const handle = new THREE.Mesh(
+        new THREE.TorusGeometry(0.18, 0.038, 16, 36, Math.PI),
+        matBagSoft,
+      );
+      handle.position.set(0, H + 0.04, Z_DIV + FRONT_D / 2);
+      handle.rotation.x = -Math.PI / 2;
+      backpack.add(handle);
+
+      function makeStrap(sign) {
+        const g = new THREE.Group();
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(sign * 0.48, H - 0.18, D / 2 + 0.05),
+          new THREE.Vector3(sign * 0.69, H * 0.68, D / 2 + 0.09),
+          new THREE.Vector3(sign * 0.72, H * 0.34, D / 2 + 0.11),
+          new THREE.Vector3(sign * 0.62, 0.18, D / 2 + 0.08),
+        ]);
+        const tube = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 80, 0.052, 14, false),
+          matBagSoft,
+        );
+        g.add(tube);
+
+        const pad = makeMesh(
+          roundedBox(0.23, 0.72, 0.095, 0.07),
+          matPanel,
+          sign * 0.66,
+          H * 0.56,
+          D / 2 + 0.105,
+        );
+        pad.rotation.z = sign * -0.04;
+        g.add(pad);
+        return g;
+      }
+      backpack.add(makeStrap(-1), makeStrap(1));
+
+      const coverGroup = new THREE.Group();
+      coverGroup.position.set(0, H, -D / 2);
+      backpack.add(coverGroup);
+
+      const cover = addClick(
+        makeMesh(
+          roundedBox(W * 0.98, H, WALL, 0.16, 6),
+          matBag,
+          0,
+          -H / 2,
+          WALL / 2,
+        ),
+        'cover',
+      );
+      coverGroup.add(cover);
+
+      const coverSeam = makeTube(
+        [
+          new THREE.Vector3(-W * 0.39, -H * 0.18, WALL + 0.012),
+          new THREE.Vector3(-W * 0.4, -H * 0.78, WALL + 0.012),
+          new THREE.Vector3(W * 0.4, -H * 0.78, WALL + 0.012),
+          new THREE.Vector3(W * 0.39, -H * 0.18, WALL + 0.012),
+        ],
+        0.009,
+        matStitch,
+        true,
+      );
+      coverGroup.add(coverSeam);
+
+      const velcroTop = addClick(
+        makeMesh(
+          roundedBox(0.78, 0.095, 0.018, 0.025),
+          matPanel,
+          0,
+          -0.32,
+          WALL + 0.012,
+        ),
+        'cover',
+      );
+      const velcroBottom = addClick(
+        makeMesh(
+          roundedBox(0.78, 0.095, 0.018, 0.025),
+          matPanel,
+          0,
+          -H + 0.32,
+          WALL + 0.012,
+        ),
+        'cover',
+      );
+      coverGroup.add(velcroTop, velcroBottom);
+
+      const cabinet = new THREE.Group();
+      shell.add(cabinet);
+
+      const drawerH = (H - WALL * 2) / 3;
+
+      for (let i = 1; i < 3; i++) {
+        cabinet.add(
+          makeMesh(
+            new THREE.BoxGeometry(W - WALL * 2, 0.035, BACK_D - 0.04),
+            matPanel,
+            0,
+            WALL + i * drawerH,
+            -D / 2 + BACK_D / 2,
+          ),
+        );
+      }
+
+      cabinet.add(
+        makeMesh(
+          new THREE.BoxGeometry(0.035, H - WALL * 2, BACK_D - 0.04),
+          matPanel,
+          0,
+          H / 2,
+          -D / 2 + BACK_D / 2,
+        ),
+      );
+
+      function addGlassWall(parent, w, h, d, x, y, z) {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matGlass);
+        wall.position.set(x, y, z);
+        parent.add(wall);
+
+        const edge = new THREE.LineSegments(
+          new THREE.EdgesGeometry(wall.geometry),
+          matGlassEdge,
+        );
+        edge.position.copy(wall.position);
+        parent.add(edge);
+        return wall;
+      }
+
+      function makeDrawerRow(rowIndex) {
+        const pair = [];
+        const y = WALL + drawerH * (rowIndex + 0.5);
+
+        for (const side of [-1, 1]) {
+          const halfW = (W - WALL * 2) / 2 - 0.045;
+          const halfH = drawerH - 0.06;
+          const halfD = BACK_D - 0.08;
+          const group = new THREE.Group();
+          group.position.set(
+            side * (halfW / 2 + 0.026),
+            y,
+            -D / 2 + BACK_D / 2,
+          );
+          group.userData.closedX = group.position.x;
+          group.userData.openX = group.position.x + side * halfW * 0.9;
+          group.userData.targetX = group.userData.closedX;
+
+          addGlassWall(group, halfW, 0.022, halfD, 0, -halfH / 2, 0);
+          addGlassWall(group, halfW, 0.022, halfD, 0, halfH / 2, 0);
+          addGlassWall(group, halfW, halfH, 0.022, 0, 0, -halfD / 2);
+          addGlassWall(group, halfW, halfH, 0.022, 0, 0, halfD / 2);
+          addGlassWall(group, 0.022, halfH, halfD, (halfW / 2) * side, 0, 0);
+          addGlassWall(group, 0.022, halfH, halfD, (-halfW / 2) * side, 0, 0);
+
+          const handle = addClick(
+            makeMesh(
+              new THREE.BoxGeometry(0.052, 0.2, 0.12),
+              matPanel,
+              side * (halfW / 2 + 0.045),
+              0,
+              0,
+            ),
+            'drawer',
+            rowIndex,
+          );
+          group.add(handle);
+
+          const proxy = addClick(
+            makeMesh(
+              new THREE.BoxGeometry(halfW, halfH, halfD),
+              new THREE.MeshBasicMaterial({
+                transparent: true,
+                opacity: 0.001,
+              }),
+              0,
+              0,
+              0,
+            ),
+            'drawer',
+            rowIndex,
+          );
+          group.add(proxy);
+
+          const itemA = makeMesh(
+            roundedBox(0.16, 0.22, 0.14, 0.02),
+            rowIndex % 2 ? matBagSoft : matPanel,
+            -side * 0.12,
+            -halfH / 2 + 0.14,
+            -0.18,
+          );
+          const itemB = makeMesh(
+            roundedBox(0.15, 0.31, 0.14, 0.02),
+            rowIndex % 2 ? matPanel : matBagSoft,
+            side * 0.12,
+            -halfH / 2 + 0.18,
+            0.15,
+          );
+          group.add(itemA, itemB);
+
+          cabinet.add(group);
+          pair.push(group);
+        }
+
+        drawerRows.push(pair);
+      }
+
+      makeDrawerRow(0);
+      makeDrawerRow(1);
+      makeDrawerRow(2);
+
+      const books = new THREE.Group();
+      for (let i = 0; i < 5; i++) {
+        const b = makeMesh(
+          roundedBox(0.15, H * (0.72 + i * 0.014), FRONT_D * 0.62, 0.02),
+          i % 2 ? matPanel : matBagSoft,
+          -W * 0.31 + i * 0.19,
+          H * 0.38,
+          Z_DIV + FRONT_D / 2,
+        );
+        books.add(b);
+      }
+      shell.add(books);
+
+      function setCover(open) {
+        state.coverOpen = open;
+      }
+
+      function setLid(open) {
+        state.lidOpen = open;
+      }
+
+      function setDrawer(index, open) {
+        state.drawersOpen[index] = open;
+        drawerRows[index].forEach((h) => {
+          h.userData.targetX = open ? h.userData.openX : h.userData.closedX;
+        });
+      }
+
+      function toggleAction(type, index) {
+        if (type === 'cover') setCover(!state.coverOpen);
+        if (type === 'lid') setLid(!state.lidOpen);
+        if (type === 'drawer') {
+          if (!state.coverOpen) setCover(true);
+          setDrawer(index, !state.drawersOpen[index]);
+        }
+      }
+
+      const raycaster = new THREE.Raycaster();
+      const pointer = new THREE.Vector2();
+      let down = { x: 0, y: 0 };
+      let moved = false;
+
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        down = { x: e.clientX, y: e.clientY };
+        moved = false;
+      });
+
+      renderer.domElement.addEventListener('pointermove', (e) => {
+        if (
+          Math.abs(e.clientX - down.x) > 5 ||
+          Math.abs(e.clientY - down.y) > 5
+        )
+          moved = true;
+      });
+
+      renderer.domElement.addEventListener('pointerup', (e) => {
+        if (moved) return;
+        const rect = renderer.domElement.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(pointer, camera);
+        const hits = raycaster.intersectObjects(clickables, true);
+        if (!hits.length) return;
+        const obj = hits[0].object;
+        toggleAction(obj.userData.type, obj.userData.index);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'r') {
+          setCover(false);
+          setLid(false);
+          for (let i = 0; i < 3; i++) setDrawer(i, false);
+        }
+      });
+
+      const clock = new THREE.Clock();
+      function lerp(a, b, t) {
+        return a + (b - a) * Math.min(1, t);
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const dt = clock.getDelta();
+        const speed = 4.8;
+
+        coverGroup.rotation.x = lerp(
+          coverGroup.rotation.x,
+          state.coverOpen ? Math.PI * 0.84 : 0,
+          dt * speed,
+        );
+        lidGroup.rotation.x = lerp(
+          lidGroup.rotation.x,
+          state.lidOpen ? -Math.PI * 0.64 : 0,
+          dt * speed,
+        );
+
+        drawerRows.forEach((pair) => {
+          pair.forEach((h) => {
+            h.position.x = lerp(h.position.x, h.userData.targetX, dt * speed);
+          });
+        });
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+
+      animate();
+
+      addEventListener('resize', () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      });
+    </script>
+  </body>
+</html>
