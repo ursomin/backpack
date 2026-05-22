@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Natural Drawer Backpack</title>
+    <title>backpack_ver0.5</title>
     <style>
       html,
       body {
@@ -92,29 +92,151 @@
       const LID_D = FRONT_D - 0.02;
       const Z_HINGE = D / 2 - LID_D;
 
+      function drawRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function makeCoverPatternTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#9bbcff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#fff5a8';
+        [
+          [150, 150, 22],
+          [410, 210, 16],
+          [760, 160, 20],
+          [250, 430, 15],
+          [620, 390, 18],
+          [850, 500, 15],
+          [160, 740, 20],
+          [460, 780, 15],
+          [760, 820, 19],
+        ].forEach(([x, y, r]) => {
+          ctx.beginPath();
+          for (let i = 0; i < 5; i++) {
+            const a = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+            const b = a + Math.PI / 5;
+            const ax = x + Math.cos(a) * r;
+            const ay = y + Math.sin(a) * r;
+            const bx = x + Math.cos(b) * r * 0.43;
+            const by = y + Math.sin(b) * r * 0.43;
+            if (i === 0) ctx.moveTo(ax, ay);
+            else ctx.lineTo(ax, ay);
+            ctx.lineTo(bx, by);
+          }
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        [
+          [250, 290],
+          [700, 640],
+        ].forEach(([x, y]) => {
+          ctx.beginPath();
+          ctx.arc(x - 38, y, 32, Math.PI * 0.9, Math.PI * 1.9);
+          ctx.arc(x, y - 18, 40, Math.PI, Math.PI * 2);
+          ctx.arc(x + 42, y, 32, Math.PI * 1.1, Math.PI * 0.1);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
+        return texture;
+      }
+
+      function makeBadgeTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 768;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff7c2';
+        drawRoundedRect(ctx, 10, 10, 748, 236, 52);
+        ctx.fill();
+        ctx.fillStyle = '#ffd35a';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const a = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+          const b = a + Math.PI / 5;
+          const ax = 110 + Math.cos(a) * 46;
+          const ay = 128 + Math.sin(a) * 46;
+          const bx = 110 + Math.cos(b) * 20;
+          const by = 128 + Math.sin(b) * 20;
+          if (i === 0) ctx.moveTo(ax, ay);
+          else ctx.lineTo(ax, ay);
+          ctx.lineTo(bx, by);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#31456d';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = '900 72px Arial, sans-serif';
+        ctx.fillText('DREAM', 190, 104);
+        ctx.font = '700 45px Arial, sans-serif';
+        ctx.fillText('BACKPACK', 190, 168);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
+        return texture;
+      }
+
+      const coverPatternTex = makeCoverPatternTexture();
+      const badgeTex = makeBadgeTexture();
+
       const matBag = new THREE.MeshStandardMaterial({
-        color: 0x090909,
-        roughness: 0.86,
-        metalness: 0.02,
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.92,
+        metalness: 0.0,
       });
       const matBagSoft = new THREE.MeshStandardMaterial({
-        color: 0x151515,
-        roughness: 0.9,
-        metalness: 0.01,
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.94,
+        metalness: 0.0,
       });
       const matPanel = new THREE.MeshStandardMaterial({
-        color: 0x202020,
-        roughness: 0.88,
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.92,
+        metalness: 0.0,
+      });
+      const matCushion = new THREE.MeshStandardMaterial({
+        color: 0x8d95a5,
+        roughness: 0.96,
         metalness: 0.01,
       });
       const matStitch = new THREE.MeshStandardMaterial({
-        color: 0x4a4a4a,
+        color: 0xc9dbff,
         roughness: 0.95,
       });
       const matMetal = new THREE.MeshStandardMaterial({
-        color: 0xbfc3c8,
-        roughness: 0.32,
-        metalness: 0.72,
+        color: 0xf9cf58,
+        roughness: 0.42,
+        metalness: 0.18,
+      });
+      const matCover = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.92,
+        metalness: 0.0,
       });
 
       const matGlass = new THREE.MeshPhysicalMaterial({
@@ -187,7 +309,7 @@
       backpack.add(shell);
 
       const bottom = makeMesh(
-        roundedBox(W * 0.92, WALL, D * 0.94, 0.055),
+        roundedBox(W * 0.98, WALL, D * 0.98, 0.06),
         matBag,
         0,
         WALL / 2,
@@ -195,19 +317,21 @@
       );
       shell.add(bottom);
 
+      const frontSideDepth = FRONT_D;
+      const frontSideZ = Z_DIV + FRONT_D / 2;
       const leftSide = makeMesh(
-        roundedBox(WALL, H * 0.92, D * 0.94, 0.055),
+        roundedBox(WALL, H, frontSideDepth, 0.06),
         matBag,
         -W / 2 + WALL / 2,
         H / 2,
-        0,
+        frontSideZ,
       );
       const rightSide = makeMesh(
-        roundedBox(WALL, H * 0.92, D * 0.94, 0.055),
+        roundedBox(WALL, H, frontSideDepth, 0.06),
         matBag,
         W / 2 - WALL / 2,
         H / 2,
-        0,
+        frontSideZ,
       );
       shell.add(leftSide, rightSide);
 
@@ -223,9 +347,38 @@
       );
       shell.add(frontFace);
 
+      const frontEdgeMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.9,
+        metalness: 0.0,
+      });
+      const frontLeftPiping = makeMesh(
+        roundedBox(0.045, H * 0.96, 0.045, 0.022),
+        frontEdgeMat,
+        -W / 2 + 0.02,
+        H / 2,
+        D / 2 + 0.012,
+      );
+      const frontRightPiping = makeMesh(
+        roundedBox(0.045, H * 0.96, 0.045, 0.022),
+        frontEdgeMat,
+        W / 2 - 0.02,
+        H / 2,
+        D / 2 + 0.012,
+      );
+      const frontBottomPiping = makeMesh(
+        roundedBox(W * 0.94, 0.045, 0.045, 0.022),
+        frontEdgeMat,
+        0,
+        0.045,
+        D / 2 + 0.012,
+      );
+      shell.add(frontLeftPiping, frontRightPiping, frontBottomPiping);
+
       const rearTopDepth = D - LID_D;
       const topRear = makeMesh(
-        roundedBox(W * 0.9, WALL, rearTopDepth, 0.08),
+        roundedBox(W * 0.98, WALL, rearTopDepth, 0.08),
         matBag,
         0,
         H - WALL / 2,
@@ -241,19 +394,6 @@
         Z_DIV,
       );
       shell.add(divider);
-
-      const sideSeamL = makeTube(
-        [
-          new THREE.Vector3(-W / 2 - 0.005, 0.34, D / 2 + 0.012),
-          new THREE.Vector3(-W / 2 - 0.01, H * 0.42, D / 2 + 0.014),
-          new THREE.Vector3(-W / 2 + 0.08, H * 0.83, D / 2 + 0.014),
-        ],
-        0.011,
-        matStitch,
-      );
-      const sideSeamR = sideSeamL.clone();
-      sideSeamR.scale.x = -1;
-      shell.add(sideSeamL, sideSeamR);
 
       const lidGroup = new THREE.Group();
       lidGroup.position.set(0, H, Z_HINGE);
@@ -271,164 +411,454 @@
       );
       lidGroup.add(lid);
 
-      function zipperTooth(x, y, z, parent) {
-        const t = makeMesh(
-          new THREE.BoxGeometry(0.032, 0.021, 0.026),
-          matMetal,
-          x,
-          y,
-          z,
+      const frontFlapDrop = 0.42;
+      const frontFlap = addClick(
+        makeMesh(
+          roundedBox(W * 0.98, frontFlapDrop, WALL, 0.12, 6),
+          matBag,
+          0,
+          -frontFlapDrop / 2,
+          LID_D + WALL / 2,
+        ),
+        'lid',
+      );
+      lidGroup.add(frontFlap);
+
+      const matFrontVelcro = new THREE.MeshStandardMaterial({
+        color: 0x5b6472,
+        roughness: 1.0,
+        metalness: 0.0,
+      });
+      const matFrontVelcroLine = new THREE.MeshStandardMaterial({
+        color: 0xd1d5db,
+        roughness: 0.95,
+      });
+
+      function makeInnerVelcroPatch(x) {
+        const patch = new THREE.Group();
+        const base = makeMesh(
+          roundedBox(0.34, 0.12, 0.014, 0.026),
+          matFrontVelcro,
+          0,
+          0,
+          0,
         );
-        parent.add(t);
-        return t;
+        patch.add(base);
+
+        for (let i = -3; i <= 3; i++) {
+          const line = makeMesh(
+            new THREE.BoxGeometry(0.012, 0.088, 0.004),
+            matFrontVelcroLine,
+            i * 0.042,
+            0,
+            -0.01,
+          );
+          patch.add(line);
+        }
+
+        patch.position.set(x, -frontFlapDrop * 0.58, LID_D - 0.008);
+        return patch;
       }
 
-      for (let x = -W * 0.42; x <= W * 0.42; x += 0.06)
-        zipperTooth(x, -WALL / 2 - 0.004, LID_D + 0.015, lidGroup);
-      for (let z = 0.05; z <= LID_D - 0.03; z += 0.06) {
-        zipperTooth(-W / 2 - 0.008, -WALL / 2 - 0.004, z, lidGroup);
-        zipperTooth(W / 2 + 0.008, -WALL / 2 - 0.004, z, lidGroup);
-      }
-
-      function makePull() {
-        const g = new THREE.Group();
-        g.add(
-          makeMesh(
-            new THREE.BoxGeometry(0.105, 0.08, 0.055),
-            matMetal,
-            0,
-            0,
-            0,
-          ),
-        );
-        g.add(
-          makeMesh(
-            new THREE.BoxGeometry(0.055, 0.15, 0.016),
-            matMetal,
-            0,
-            -0.115,
-            0,
-          ),
-        );
-        return g;
-      }
-
-      const pullL = makePull();
-      pullL.position.set(-W * 0.38, -WALL / 2 - 0.052, LID_D + 0.036);
-      lidGroup.add(pullL);
-
-      const pullR = makePull();
-      pullR.position.set(W * 0.38, -WALL / 2 - 0.052, LID_D + 0.036);
-      lidGroup.add(pullR);
-
-      const pocket = makeMesh(
-        roundedBox(W * 0.58, H * 0.31, 0.045, 0.075),
-        matPanel,
-        0,
-        H * 0.32,
-        D / 2 + 0.026,
-      );
-      shell.add(pocket);
-
-      const pocketZip = makeMesh(
-        new THREE.BoxGeometry(W * 0.48, 0.032, 0.017),
-        matMetal,
-        0,
-        H * 0.46,
-        D / 2 + 0.055,
-      );
-      shell.add(pocketZip);
-
-      const pocketPull = makePull();
-      pocketPull.scale.setScalar(0.75);
-      pocketPull.position.set(W * 0.2, H * 0.46, D / 2 + 0.068);
-      shell.add(pocketPull);
-
-      const handle = new THREE.Mesh(
-        new THREE.TorusGeometry(0.18, 0.038, 16, 36, Math.PI),
-        matBagSoft,
-      );
-      handle.position.set(0, H + 0.04, Z_DIV + FRONT_D / 2);
-      handle.rotation.x = -Math.PI / 2;
-      backpack.add(handle);
+      lidGroup.add(makeInnerVelcroPatch(-W * 0.24));
+      lidGroup.add(makeInnerVelcroPatch(W * 0.24));
 
       function makeStrap(sign) {
         const g = new THREE.Group();
+        const strapZ = D / 2 + 0.006;
+
+        const topAnchor = makeMesh(
+          roundedBox(0.28, 0.18, 0.035, 0.035),
+          matBagSoft,
+          sign * 0.48,
+          H - 0.18,
+          strapZ,
+        );
+        topAnchor.rotation.z = sign * -0.08;
+        g.add(topAnchor);
+
+        const bottomAnchor = makeMesh(
+          roundedBox(0.32, 0.16, 0.035, 0.035),
+          matBagSoft,
+          sign * 0.61,
+          0.18,
+          strapZ,
+        );
+        bottomAnchor.rotation.z = sign * 0.06;
+        g.add(bottomAnchor);
+
         const curve = new THREE.CatmullRomCurve3([
-          new THREE.Vector3(sign * 0.48, H - 0.18, D / 2 + 0.05),
-          new THREE.Vector3(sign * 0.69, H * 0.68, D / 2 + 0.09),
-          new THREE.Vector3(sign * 0.72, H * 0.34, D / 2 + 0.11),
-          new THREE.Vector3(sign * 0.62, 0.18, D / 2 + 0.08),
+          new THREE.Vector3(sign * 0.48, H - 0.25, strapZ + 0.006),
+          new THREE.Vector3(sign * 0.64, H * 0.68, strapZ + 0.012),
+          new THREE.Vector3(sign * 0.68, H * 0.36, strapZ + 0.012),
+          new THREE.Vector3(sign * 0.61, 0.28, strapZ + 0.006),
         ]);
         const tube = new THREE.Mesh(
-          new THREE.TubeGeometry(curve, 80, 0.052, 14, false),
+          new THREE.TubeGeometry(curve, 80, 0.034, 14, false),
           matBagSoft,
         );
         g.add(tube);
 
         const pad = makeMesh(
-          roundedBox(0.23, 0.72, 0.095, 0.07),
+          roundedBox(0.22, 0.64, 0.045, 0.055),
           matPanel,
-          sign * 0.66,
-          H * 0.56,
-          D / 2 + 0.105,
+          sign * 0.65,
+          H * 0.55,
+          strapZ + 0.014,
         );
-        pad.rotation.z = sign * -0.04;
+        pad.rotation.z = sign * -0.035;
         g.add(pad);
         return g;
       }
       backpack.add(makeStrap(-1), makeStrap(1));
 
+      function makePikachuKeyring() {
+        const g = new THREE.Group();
+        const yellow = new THREE.MeshStandardMaterial({
+          color: 0xffd83d,
+          roughness: 0.68,
+          metalness: 0.01,
+        });
+        const black = new THREE.MeshStandardMaterial({
+          color: 0x151515,
+          roughness: 0.55,
+        });
+        const red = new THREE.MeshStandardMaterial({
+          color: 0xff5a5f,
+          roughness: 0.62,
+        });
+        const metal = new THREE.MeshStandardMaterial({
+          color: 0xb8c0c8,
+          roughness: 0.34,
+          metalness: 0.72,
+        });
+
+        const charmLoop = new THREE.Mesh(
+          new THREE.TorusGeometry(0.045, 0.006, 10, 24),
+          metal,
+        );
+        charmLoop.rotation.y = Math.PI / 2;
+        charmLoop.position.set(0, 0.155, 0);
+        g.add(charmLoop);
+
+        const head = new THREE.Mesh(
+          new THREE.SphereGeometry(0.105, 28, 22),
+          yellow,
+        );
+        head.scale.set(1.02, 0.92, 0.84);
+        head.position.set(0, 0.02, 0);
+        g.add(head);
+
+        const body = new THREE.Mesh(
+          new THREE.SphereGeometry(0.095, 24, 18),
+          yellow,
+        );
+        body.scale.set(0.82, 1.0, 0.7);
+        body.position.set(0, -0.14, 0);
+        g.add(body);
+
+        function makeEar(sign) {
+          const ear = new THREE.Group();
+          const base = new THREE.Mesh(
+            new THREE.ConeGeometry(0.032, 0.145, 16),
+            yellow,
+          );
+          base.rotation.z = sign * -0.48;
+          base.position.set(sign * 0.06, 0.145, 0);
+          ear.add(base);
+
+          const tip = new THREE.Mesh(
+            new THREE.ConeGeometry(0.022, 0.052, 16),
+            black,
+          );
+          tip.rotation.z = sign * -0.48;
+          tip.position.set(sign * 0.088, 0.215, 0);
+          ear.add(tip);
+          return ear;
+        }
+        g.add(makeEar(-1), makeEar(1));
+
+        for (const eyeX of [-0.036, 0.036]) {
+          const eye = new THREE.Mesh(
+            new THREE.SphereGeometry(0.01, 12, 12),
+            black,
+          );
+          eye.position.set(eyeX, 0.026, 0.088);
+          g.add(eye);
+        }
+
+        for (const cheekX of [-0.06, 0.06]) {
+          const cheek = new THREE.Mesh(
+            new THREE.SphereGeometry(0.015, 12, 10),
+            red,
+          );
+          cheek.scale.set(1.08, 0.72, 0.3);
+          cheek.position.set(cheekX, -0.006, 0.09);
+          g.add(cheek);
+        }
+
+        const mouth = new THREE.Mesh(
+          new THREE.TorusGeometry(0.018, 0.003, 8, 14, Math.PI),
+          black,
+        );
+        mouth.rotation.z = Math.PI;
+        mouth.position.set(0, -0.026, 0.092);
+        g.add(mouth);
+
+        const tailA = makeMesh(
+          new THREE.BoxGeometry(0.026, 0.08, 0.014),
+          yellow,
+          0.095,
+          -0.14,
+          -0.018,
+        );
+        tailA.rotation.z = -0.65;
+        g.add(tailA);
+        const tailB = makeMesh(
+          new THREE.BoxGeometry(0.032, 0.095, 0.014),
+          yellow,
+          0.13,
+          -0.075,
+          -0.018,
+        );
+        tailB.rotation.z = 0.55;
+        g.add(tailB);
+
+        g.scale.setScalar(0.66);
+        return g;
+      }
+
+      const keyringHook = new THREE.Group();
+      const hookMat = new THREE.MeshStandardMaterial({
+        color: 0xb8c0c8,
+        roughness: 0.34,
+        metalness: 0.72,
+      });
+      const tabMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.9,
+        metalness: 0.0,
+      });
+      const sideX = W / 2 + 0.006;
+      const sideY = H * 0.64;
+      const sideZ = frontSideZ + 0.045;
+
+      const fabricTab = makeMesh(
+        roundedBox(0.035, 0.24, 0.105, 0.018),
+        tabMat,
+        sideX,
+        sideY,
+        sideZ,
+      );
+      fabricTab.rotation.z = 0.02;
+      keyringHook.add(fabricTab);
+
+      const dRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.075, 0.009, 12, 32),
+        hookMat,
+      );
+      dRing.rotation.y = Math.PI / 2;
+      dRing.position.set(W / 2 + 0.035, sideY - 0.13, sideZ);
+      keyringHook.add(dRing);
+
+      const connector = new THREE.Mesh(
+        new THREE.TorusGeometry(0.04, 0.0065, 10, 24),
+        hookMat,
+      );
+      connector.rotation.y = Math.PI / 2;
+      connector.position.set(W / 2 + 0.042, sideY - 0.235, sideZ);
+      keyringHook.add(connector);
+
+      const pikaKeyring = makePikachuKeyring();
+      pikaKeyring.position.set(W / 2 + 0.048, sideY - 0.405, sideZ);
+      pikaKeyring.rotation.y = -Math.PI / 2;
+      pikaKeyring.rotation.z = -0.03;
+      keyringHook.add(pikaKeyring);
+      backpack.add(keyringHook);
+
       const coverGroup = new THREE.Group();
       coverGroup.position.set(0, H, -D / 2);
       backpack.add(coverGroup);
 
+      const rearFoldDepth = 0.44;
+      const rearCoverH = H;
+
       const cover = addClick(
         makeMesh(
-          roundedBox(W * 0.98, H, WALL, 0.16, 6),
-          matBag,
+          roundedBox(W * 0.98, rearCoverH, WALL, 0.16, 6),
+          matCover,
           0,
-          -H / 2,
+          -rearCoverH / 2,
           WALL / 2,
         ),
         'cover',
       );
       coverGroup.add(cover);
 
-      const coverSeam = makeTube(
-        [
-          new THREE.Vector3(-W * 0.39, -H * 0.18, WALL + 0.012),
-          new THREE.Vector3(-W * 0.4, -H * 0.78, WALL + 0.012),
-          new THREE.Vector3(W * 0.4, -H * 0.78, WALL + 0.012),
-          new THREE.Vector3(W * 0.39, -H * 0.18, WALL + 0.012),
-        ],
-        0.009,
-        matStitch,
-        true,
+      const rearSideDepth = BACK_D + 0.02;
+      const rearSideZ = rearSideDepth / 2;
+      const coverSideLeft = addClick(
+        makeMesh(
+          roundedBox(WALL, rearCoverH, rearSideDepth, 0.06),
+          matCover,
+          -W / 2 + WALL / 2,
+          -rearCoverH / 2,
+          rearSideZ,
+        ),
+        'cover',
       );
-      coverGroup.add(coverSeam);
+      const coverSideRight = addClick(
+        makeMesh(
+          roundedBox(WALL, rearCoverH, rearSideDepth, 0.06),
+          matCover,
+          W / 2 - WALL / 2,
+          -rearCoverH / 2,
+          rearSideZ,
+        ),
+        'cover',
+      );
+      coverGroup.add(coverSideLeft, coverSideRight);
 
-      const velcroTop = addClick(
+      const rearEdgeMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: coverPatternTex,
+        roughness: 0.9,
+        metalness: 0.0,
+      });
+      const rearLeftPiping = makeMesh(
+        roundedBox(0.045, rearCoverH * 0.96, 0.045, 0.022),
+        rearEdgeMat,
+        -W / 2 + 0.02,
+        -rearCoverH / 2,
+        WALL + 0.012,
+      );
+      const rearRightPiping = makeMesh(
+        roundedBox(0.045, rearCoverH * 0.96, 0.045, 0.022),
+        rearEdgeMat,
+        W / 2 - 0.02,
+        -rearCoverH / 2,
+        WALL + 0.012,
+      );
+      const rearTopPiping = makeMesh(
+        roundedBox(W * 0.94, 0.045, 0.045, 0.022),
+        rearEdgeMat,
+        0,
+        -0.045,
+        WALL + 0.012,
+      );
+      const rearBottomPiping = makeMesh(
+        roundedBox(W * 0.94, 0.045, 0.045, 0.022),
+        rearEdgeMat,
+        0,
+        -rearCoverH + 0.045,
+        WALL + 0.012,
+      );
+      coverGroup.add(
+        rearLeftPiping,
+        rearRightPiping,
+        rearTopPiping,
+        rearBottomPiping,
+      );
+
+      const rearUpperWrapDepth = 0.2;
+      const rearUpperWrapHeight = 0.36;
+
+      const rearTopWrap = makeMesh(
+        roundedBox(W * 1.02, WALL, rearUpperWrapDepth, 0.05),
+        matCover,
+        0,
+        -WALL / 2,
+        WALL / 2 + rearUpperWrapDepth / 2,
+      );
+      coverGroup.add(rearTopWrap);
+
+      const rearBottomFold = addClick(
         makeMesh(
-          roundedBox(0.78, 0.095, 0.018, 0.025),
-          matPanel,
+          roundedBox(W * 0.98, rearFoldDepth, WALL, 0.13, 6),
+          matCover,
           0,
-          -0.32,
-          WALL + 0.012,
+          -H - WALL / 2,
+          WALL / 2 + rearFoldDepth / 2,
         ),
         'cover',
       );
-      const velcroBottom = addClick(
-        makeMesh(
-          roundedBox(0.78, 0.095, 0.018, 0.025),
-          matPanel,
-          0,
-          -H + 0.32,
-          WALL + 0.012,
-        ),
-        'cover',
+
+      const rearBottomFoldEdge = makeMesh(
+        roundedBox(W * 0.94, 0.04, 0.04, 0.02),
+        rearEdgeMat,
+        0,
+        -H - WALL / 2,
+        WALL / 2 + rearFoldDepth - 0.02,
       );
-      coverGroup.add(velcroTop, velcroBottom);
+      rearBottomFoldEdge.rotation.x = Math.PI / 2;
+      coverGroup.add(rearBottomFoldEdge);
+      rearBottomFold.rotation.x = Math.PI / 2;
+      coverGroup.add(rearBottomFold);
+
+      function makeFoldVelcroPatch(
+        x,
+        localY,
+        localZ,
+        parentGroup,
+        faceDirection = 1,
+      ) {
+        const patch = new THREE.Group();
+        const base = makeMesh(
+          roundedBox(0.42, 0.13, 0.014, 0.028),
+          matFrontVelcro,
+          0,
+          0,
+          0,
+        );
+        patch.add(base);
+
+        for (let i = -4; i <= 4; i++) {
+          const line = makeMesh(
+            new THREE.BoxGeometry(0.012, 0.096, 0.004),
+            matFrontVelcroLine,
+            i * 0.042,
+            0,
+            faceDirection * 0.01,
+          );
+          patch.add(line);
+        }
+
+        patch.rotation.x = Math.PI / 2;
+        patch.position.set(x, localY, localZ);
+        parentGroup.add(patch);
+        return patch;
+      }
+
+      makeFoldVelcroPatch(
+        -W * 0.24,
+        -H - 0.006,
+        WALL / 2 + rearFoldDepth * 0.58,
+        coverGroup,
+        1,
+      );
+      makeFoldVelcroPatch(
+        W * 0.24,
+        -H - 0.006,
+        WALL / 2 + rearFoldDepth * 0.58,
+        coverGroup,
+        1,
+      );
+
+      makeFoldVelcroPatch(
+        -W * 0.24,
+        -0.008,
+        -D / 2 + WALL / 2 + rearFoldDepth * 0.58,
+        shell,
+        -1,
+      );
+      makeFoldVelcroPatch(
+        W * 0.24,
+        -0.008,
+        -D / 2 + WALL / 2 + rearFoldDepth * 0.58,
+        shell,
+        -1,
+      );
 
       const cabinet = new THREE.Group();
       shell.add(cabinet);
@@ -471,38 +901,389 @@
         return wall;
       }
 
+      function makePencil() {
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.022, 0.022, 0.42, 16),
+          new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.55 }),
+        );
+        body.rotation.z = Math.PI / 2;
+        g.add(body);
+
+        const tip = new THREE.Mesh(
+          new THREE.ConeGeometry(0.024, 0.075, 16),
+          new THREE.MeshStandardMaterial({ color: 0xd6b08a, roughness: 0.7 }),
+        );
+        tip.rotation.z = -Math.PI / 2;
+        tip.position.x = 0.245;
+        g.add(tip);
+
+        const lead = new THREE.Mesh(
+          new THREE.ConeGeometry(0.012, 0.035, 12),
+          new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 }),
+        );
+        lead.rotation.z = -Math.PI / 2;
+        lead.position.x = 0.298;
+        g.add(lead);
+
+        const eraser = makeMesh(
+          new THREE.BoxGeometry(0.055, 0.045, 0.045),
+          new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.65 }),
+          -0.235,
+          0,
+          0,
+        );
+        g.add(eraser);
+        return g;
+      }
+
+      function makeMarker(color) {
+        const g = new THREE.Group();
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.032, 0.032, 0.44, 18),
+          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 }),
+        );
+        body.rotation.x = Math.PI / 2;
+        g.add(body);
+
+        const capA = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.036, 0.036, 0.08, 18),
+          new THREE.MeshStandardMaterial({ color, roughness: 0.48 }),
+        );
+        capA.rotation.x = Math.PI / 2;
+        capA.position.z = 0.245;
+        g.add(capA);
+
+        const capB = capA.clone();
+        capB.position.z = -0.245;
+        g.add(capB);
+        return g;
+      }
+
+      function makePaintTube(color) {
+        const g = new THREE.Group();
+        const tube = makeMesh(
+          roundedBox(0.15, 0.08, 0.32, 0.02),
+          new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.68 }),
+          0,
+          0,
+          0,
+        );
+        g.add(tube);
+
+        const label = makeMesh(
+          new THREE.BoxGeometry(0.105, 0.086, 0.035),
+          new THREE.MeshStandardMaterial({ color, roughness: 0.55 }),
+          0,
+          0.002,
+          0.02,
+        );
+        g.add(label);
+
+        const cap = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.06, 16),
+          new THREE.MeshStandardMaterial({
+            color: 0xd1d5db,
+            roughness: 0.45,
+            metalness: 0.2,
+          }),
+        );
+        cap.rotation.x = Math.PI / 2;
+        cap.position.z = 0.19;
+        g.add(cap);
+        return g;
+      }
+
+      function makeAirPods() {
+        const g = new THREE.Group();
+        const white = new THREE.MeshStandardMaterial({
+          color: 0xf8fafc,
+          roughness: 0.42,
+          metalness: 0.02,
+        });
+        const silver = new THREE.MeshStandardMaterial({
+          color: 0xd1d5db,
+          roughness: 0.36,
+          metalness: 0.18,
+        });
+
+        const caseBody = makeMesh(
+          roundedBox(0.34, 0.18, 0.18, 0.055),
+          white,
+          0,
+          0,
+          0,
+        );
+        g.add(caseBody);
+
+        const lidLine = makeMesh(
+          new THREE.BoxGeometry(0.29, 0.012, 0.185),
+          silver,
+          0,
+          0.035,
+          0,
+        );
+        g.add(lidLine);
+
+        const leftBud = new THREE.Group();
+        const leftHead = new THREE.Mesh(
+          new THREE.SphereGeometry(0.055, 18, 18),
+          white,
+        );
+        leftHead.position.set(-0.07, 0.14, 0.01);
+        leftBud.add(leftHead);
+        const leftStem = makeMesh(
+          roundedBox(0.035, 0.16, 0.035, 0.018),
+          white,
+          -0.07,
+          0.04,
+          0.01,
+        );
+        leftBud.add(leftStem);
+        g.add(leftBud);
+
+        const rightBud = leftBud.clone();
+        rightBud.position.x = 0.14;
+        g.add(rightBud);
+
+        g.scale.setScalar(1.05);
+        return g;
+      }
+
+      function makeOctopusDoll() {
+        const g = new THREE.Group();
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: 0xf9a8d4,
+          roughness: 0.74,
+          metalness: 0.01,
+        });
+        const blushMat = new THREE.MeshStandardMaterial({
+          color: 0xfb7185,
+          roughness: 0.75,
+        });
+        const eyeMat = new THREE.MeshStandardMaterial({
+          color: 0x111111,
+          roughness: 0.45,
+        });
+        const whiteMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.55,
+        });
+
+        const head = new THREE.Mesh(
+          new THREE.SphereGeometry(0.15, 28, 22),
+          bodyMat,
+        );
+        head.scale.y = 0.9;
+        head.position.y = 0.12;
+        g.add(head);
+
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI * 2 * i) / 6;
+          const tentacle = new THREE.Mesh(
+            new THREE.SphereGeometry(0.045, 16, 12),
+            bodyMat,
+          );
+          tentacle.scale.set(1.15, 0.65, 1.15);
+          tentacle.position.set(
+            Math.cos(angle) * 0.12,
+            -0.03,
+            Math.sin(angle) * 0.1,
+          );
+          g.add(tentacle);
+        }
+
+        const eyeL = new THREE.Mesh(
+          new THREE.SphereGeometry(0.018, 12, 12),
+          eyeMat,
+        );
+        eyeL.position.set(-0.055, 0.16, 0.13);
+        g.add(eyeL);
+        const eyeR = eyeL.clone();
+        eyeR.position.x = 0.055;
+        g.add(eyeR);
+
+        const shineL = new THREE.Mesh(
+          new THREE.SphereGeometry(0.006, 8, 8),
+          whiteMat,
+        );
+        shineL.position.set(-0.049, 0.168, 0.144);
+        g.add(shineL);
+        const shineR = shineL.clone();
+        shineR.position.x = 0.061;
+        g.add(shineR);
+
+        const cheekL = new THREE.Mesh(
+          new THREE.SphereGeometry(0.018, 12, 8),
+          blushMat,
+        );
+        cheekL.scale.set(1.25, 0.55, 0.35);
+        cheekL.position.set(-0.085, 0.125, 0.136);
+        g.add(cheekL);
+        const cheekR = cheekL.clone();
+        cheekR.position.x = 0.085;
+        g.add(cheekR);
+
+        g.scale.setScalar(1.08);
+        return g;
+      }
+
+      function addDrawerContents(group, rowIndex, side, halfH) {
+        const bottomY = -halfH / 2 + 0.065;
+
+        if (rowIndex === 0 && side === 1) {
+          const airPods = makeAirPods();
+          airPods.position.set(0, bottomY + 0.085, 0);
+          airPods.rotation.y = -0.16;
+          group.add(airPods);
+          return;
+        }
+
+        if (rowIndex === 1 && side === 1) {
+          const octopus = makeOctopusDoll();
+          octopus.position.set(0, bottomY + 0.14, 0.02);
+          octopus.rotation.y = -0.08;
+          group.add(octopus);
+          return;
+        }
+
+        if (rowIndex === 0) {
+          const pencil1 = makePencil();
+          pencil1.position.set(-side * 0.08, bottomY, -0.18);
+          pencil1.rotation.y = 0.12;
+          group.add(pencil1);
+
+          const pencil2 = makePencil();
+          pencil2.position.set(side * 0.08, bottomY + 0.035, 0.08);
+          pencil2.rotation.y = -0.1;
+          pencil2.rotation.z = 0.05;
+          group.add(pencil2);
+
+          const eraser = makeMesh(
+            roundedBox(0.16, 0.07, 0.1, 0.018),
+            new THREE.MeshStandardMaterial({
+              color: 0xfca5a5,
+              roughness: 0.65,
+            }),
+            side * 0.18,
+            bottomY + 0.005,
+            0.22,
+          );
+          group.add(eraser);
+        }
+
+        if (rowIndex === 1) {
+          const colors = [0xef4444, 0x22c55e, 0x3b82f6, 0xf59e0b, 0xa855f7];
+          colors.forEach((color, i) => {
+            const marker = makeMarker(color);
+            marker.position.set(-0.22 + i * 0.11, bottomY + i * 0.008, -0.02);
+            marker.rotation.y = 0.05 * side;
+            group.add(marker);
+          });
+        }
+
+        if (rowIndex === 2) {
+          const tray = makeMesh(
+            roundedBox(0.52, 0.045, 0.34, 0.025),
+            new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 }),
+            0,
+            bottomY - 0.005,
+            0,
+          );
+          group.add(tray);
+
+          const paintColors = [
+            0xef4444, 0xfacc15, 0x22c55e, 0x3b82f6, 0xa855f7, 0xf97316,
+          ];
+          paintColors.forEach((color, i) => {
+            const paint = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.04, 0.04, 0.018, 18),
+              new THREE.MeshStandardMaterial({ color, roughness: 0.35 }),
+            );
+            paint.rotation.x = Math.PI / 2;
+            paint.position.set(
+              -0.2 + (i % 3) * 0.2,
+              bottomY + 0.035,
+              -0.09 + Math.floor(i / 3) * 0.18,
+            );
+            group.add(paint);
+          });
+
+          const tube = makePaintTube(0x60a5fa);
+          tube.position.set(0.16, bottomY + 0.075, 0.2);
+          tube.rotation.y = -0.25;
+          group.add(tube);
+        }
+      }
+
       function makeDrawerRow(rowIndex) {
         const pair = [];
         const y = WALL + drawerH * (rowIndex + 0.5);
 
         for (const side of [-1, 1]) {
-          const halfW = (W - WALL * 2) / 2 - 0.045;
+          const halfW = (W - WALL * 2) / 2 - 0.135;
           const halfH = drawerH - 0.06;
           const halfD = BACK_D - 0.08;
           const group = new THREE.Group();
-          group.position.set(
-            side * (halfW / 2 + 0.026),
-            y,
-            -D / 2 + BACK_D / 2,
-          );
+          group.position.set(side * (halfW / 2 + 0.07), y, -D / 2 + BACK_D / 2);
           group.userData.closedX = group.position.x;
-          group.userData.openX = group.position.x + side * halfW * 0.9;
+          group.userData.openX = group.position.x + side * halfW * 0.86;
           group.userData.targetX = group.userData.closedX;
 
           addGlassWall(group, halfW, 0.022, halfD, 0, -halfH / 2, 0);
-          addGlassWall(group, halfW, 0.022, halfD, 0, halfH / 2, 0);
           addGlassWall(group, halfW, halfH, 0.022, 0, 0, -halfD / 2);
           addGlassWall(group, halfW, halfH, 0.022, 0, 0, halfD / 2);
           addGlassWall(group, 0.022, halfH, halfD, (halfW / 2) * side, 0, 0);
           addGlassWall(group, 0.022, halfH, halfD, (-halfW / 2) * side, 0, 0);
 
+          const bottomCushion = makeMesh(
+            roundedBox(halfW * 0.9, 0.026, halfD * 0.9, 0.01),
+            matCushion,
+            0,
+            -halfH / 2 + 0.032,
+            0,
+          );
+          group.add(bottomCushion);
+
+          const innerBackCushion = makeMesh(
+            roundedBox(halfW * 0.9, halfH * 0.82, 0.026, 0.01),
+            matCushion,
+            0,
+            0,
+            halfD / 2 - 0.032,
+          );
+          group.add(innerBackCushion);
+
+          const sideCushionA = makeMesh(
+            roundedBox(0.026, halfH * 0.82, halfD * 0.9, 0.01),
+            matCushion,
+            -halfW / 2 + 0.032,
+            0,
+            0,
+          );
+          group.add(sideCushionA);
+
+          const sideCushionB = makeMesh(
+            roundedBox(0.026, halfH * 0.82, halfD * 0.9, 0.01),
+            matCushion,
+            halfW / 2 - 0.032,
+            0,
+            0,
+          );
+          group.add(sideCushionB);
+
+          const drawerHandleColors = [0xf9cf58, 0x8ae2cf, 0xf6a7c1];
           const handle = addClick(
             makeMesh(
-              new THREE.BoxGeometry(0.052, 0.2, 0.12),
-              matPanel,
-              side * (halfW / 2 + 0.045),
+              roundedBox(0.034, 0.22, 0.115, 0.018),
+              new THREE.MeshStandardMaterial({
+                color: drawerHandleColors[rowIndex],
+                roughness: 0.72,
+                metalness: 0.03,
+              }),
+              side * (halfW / 2 + 0.018),
               0,
-              0,
+              -halfD / 2 + 0.06,
             ),
             'drawer',
             rowIndex,
@@ -525,21 +1306,7 @@
           );
           group.add(proxy);
 
-          const itemA = makeMesh(
-            roundedBox(0.16, 0.22, 0.14, 0.02),
-            rowIndex % 2 ? matBagSoft : matPanel,
-            -side * 0.12,
-            -halfH / 2 + 0.14,
-            -0.18,
-          );
-          const itemB = makeMesh(
-            roundedBox(0.15, 0.31, 0.14, 0.02),
-            rowIndex % 2 ? matPanel : matBagSoft,
-            side * 0.12,
-            -halfH / 2 + 0.18,
-            0.15,
-          );
-          group.add(itemA, itemB);
+          addDrawerContents(group, rowIndex, side, halfH);
 
           cabinet.add(group);
           pair.push(group);
@@ -553,16 +1320,114 @@
       makeDrawerRow(2);
 
       const books = new THREE.Group();
-      for (let i = 0; i < 5; i++) {
-        const b = makeMesh(
-          roundedBox(0.15, H * (0.72 + i * 0.014), FRONT_D * 0.62, 0.02),
-          i % 2 ? matPanel : matBagSoft,
-          -W * 0.31 + i * 0.19,
-          H * 0.38,
-          Z_DIV + FRONT_D / 2,
-        );
-        books.add(b);
+
+      function makeBookCoverTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#f8f6ef';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#93c5fd';
+        roundRect(ctx, 42, 52, 428, 150, 38);
+        ctx.fill();
+
+        ctx.fillStyle = '#2563eb';
+        roundRect(ctx, 42, 820, 428, 96, 28);
+        ctx.fill();
+
+        ctx.fillStyle = '#111827';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '800 64px Malgun Gothic, Apple SD Gothic Neo, sans-serif';
+        ctx.fillText('초등', 256, 390);
+        ctx.fillText('교과서', 256, 480);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 44px Malgun Gothic, Apple SD Gothic Neo, sans-serif';
+        ctx.fillText('1학년', 256, 868);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = 4;
+        return texture;
       }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      const singleBook = new THREE.Group();
+      const bookW = 1.34;
+      const bookH = 2.08;
+      const bookD = 0.18;
+
+      const bookBody = makeMesh(
+        roundedBox(bookW, bookH, bookD, 0.026),
+        new THREE.MeshStandardMaterial({
+          color: 0xf7f3e8,
+          roughness: 0.84,
+          metalness: 0.01,
+        }),
+        0,
+        0,
+        0,
+      );
+      singleBook.add(bookBody);
+
+      const bookPages = makeMesh(
+        new THREE.BoxGeometry(bookW * 0.88, bookH * 0.9, bookD * 0.72),
+        new THREE.MeshStandardMaterial({
+          color: 0xf5f1e8,
+          roughness: 0.96,
+          metalness: 0,
+        }),
+        bookW * 0.04,
+        0,
+        0,
+      );
+      singleBook.add(bookPages);
+
+      const bookSpine = makeMesh(
+        new THREE.BoxGeometry(bookW * 0.13, bookH * 1.01, bookD * 1.05),
+        new THREE.MeshStandardMaterial({
+          color: 0x2563eb,
+          roughness: 0.82,
+          metalness: 0.01,
+        }),
+        -bookW / 2 + bookW * 0.065,
+        0,
+        0,
+      );
+      singleBook.add(bookSpine);
+
+      const coverPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(bookW * 0.93, bookH * 0.95),
+        new THREE.MeshStandardMaterial({
+          map: makeBookCoverTexture(),
+          roughness: 0.76,
+          metalness: 0.01,
+        }),
+      );
+      coverPlane.position.set(0, 0, bookD / 2 + 0.004);
+      singleBook.add(coverPlane);
+
+      singleBook.position.set(0, bookH / 2 + 0.08, Z_DIV + FRONT_D / 2);
+      singleBook.rotation.z = -0.025;
+      books.add(singleBook);
+
       shell.add(books);
 
       function setCover(open) {
