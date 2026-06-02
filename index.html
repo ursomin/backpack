@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>backpack_ver0.5</title>
+    <title>backpack_ver0.999999</title>
     <style>
       html,
       body {
@@ -851,27 +851,31 @@
 
       const rearSideDepth = BACK_D + 0.02;
       const rearSideZ = rearSideDepth / 2;
-      const coverSideLeft = addClick(
+
+      // 커버가 열릴 때 옆면까지 같이 열리면 서랍의 좌우 지지가 사라진다.
+      // 그래서 서랍부 좌우 옆벽은 커버에서 분리하고, 본체에 고정된 가이드 벽으로 둔다.
+      // 커버는 이제 서랍을 덮는 평평한 패딩 도어 역할만 한다.
+      const fixedSideGuardLeft = addClick(
         makeMesh(
           roundedBox(WALL, rearCoverH, rearSideDepth, 0.06),
           matCover,
           -W / 2 + WALL / 2,
           rearCoverH / 2,
-          rearSideZ,
+          -D / 2 + rearSideZ,
         ),
         'cover',
       );
-      const coverSideRight = addClick(
+      const fixedSideGuardRight = addClick(
         makeMesh(
           roundedBox(WALL, rearCoverH, rearSideDepth, 0.06),
           matCover,
           W / 2 - WALL / 2,
           rearCoverH / 2,
-          rearSideZ,
+          -D / 2 + rearSideZ,
         ),
         'cover',
       );
-      coverGroup.add(coverSideLeft, coverSideRight);
+      shell.add(fixedSideGuardLeft, fixedSideGuardRight);
 
       const rearEdgeMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -1022,6 +1026,49 @@
           -D / 2 + BACK_D / 2,
         ),
       );
+
+      // 앞으로 열리는 서랍이 좌우로 빠져 보이지 않도록, 본체 안쪽에 얇은 고정 가이드 레일을 추가한다.
+      // 레일은 실제 제품의 플라스틱/원단 보강 턱처럼 서랍 양옆을 잡아주는 역할을 한다.
+      function addDrawerSideGuideRails(rowIndex) {
+        const rowCenterY = WALL + drawerH * (rowIndex + 0.5);
+        const railY = rowCenterY - drawerH / 2 + 0.075;
+        const railD = BACK_D - 0.08;
+        const railH = 0.038;
+        const railW = 0.046;
+        const railZ = -D / 2 + BACK_D / 2;
+
+        // 바깥 좌우 가이드: 모든 서랍의 좌우 이탈을 막는 고정 턱이다.
+        [-1, 1].forEach((side) => {
+          cabinet.add(
+            makeMesh(
+              roundedBox(railW, railH, railD, 0.018),
+              matPanel,
+              side * (W / 2 - WALL - railW / 2 - 0.012),
+              railY,
+              railZ,
+            ),
+          );
+        });
+
+        // 하프 서랍이 있는 위쪽 2개 층에는 중앙 분리대 양쪽에도 짧은 가이드 턱을 추가한다.
+        if (rowIndex > 0) {
+          [-1, 1].forEach((side) => {
+            cabinet.add(
+              makeMesh(
+                roundedBox(railW * 0.72, railH, railD, 0.014),
+                matPanel,
+                side * (0.035 / 2 + railW * 0.42),
+                railY,
+                railZ,
+              ),
+            );
+          });
+        }
+      }
+
+      addDrawerSideGuideRails(0);
+      addDrawerSideGuideRails(1);
+      addDrawerSideGuideRails(2);
 
       function addGlassWall(parent, w, h, d, x, y, z) {
         const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matGlass);
@@ -1570,11 +1617,11 @@
           const group = new THREE.Group();
           group.position.set(0, y, -D / 2 + BACK_D / 2);
           group.userData.closedX = group.position.x;
-          // 맨 아래 서랍은 하나의 통짜 서랍이지만, 위 서랍처럼 앞뒤가 아니라 좌우 방향으로 열린다.
-          group.userData.openX = group.position.x + fullW * 0.55;
+          // 서랍은 좌우가 아니라 커버가 열리는 방향, 즉 후면 앞으로 자연스럽게 빠져나온다.
+          group.userData.openX = group.userData.closedX;
           group.userData.targetX = group.userData.closedX;
           group.userData.closedZ = group.position.z;
-          group.userData.openZ = group.position.z;
+          group.userData.openZ = group.position.z - fullD * 0.72;
           group.userData.targetZ = group.userData.closedZ;
 
           addGlassWall(group, fullW, 0.022, fullD, 0, -fullH / 2, 0);
@@ -1620,25 +1667,23 @@
           group.add(sideCushionB);
 
           const drawerHandleColors = [0xf9cf58, 0x8ae2cf, 0xf6a7c1];
-          // 맨 아래 통짜 서랍도 양쪽에서 잡을 수 있게 좌우 손잡이를 모두 배치한다.
-          [-1, 1].forEach((handleSide) => {
-            const handle = addClick(
-              makeMesh(
-                roundedBox(0.034, 0.22, 0.115, 0.018),
-                new THREE.MeshStandardMaterial({
-                  color: drawerHandleColors[rowIndex],
-                  roughness: 0.72,
-                  metalness: 0.03,
-                }),
-                handleSide * (fullW / 2 + 0.018),
-                0,
-                -fullD / 2 + 0.06,
-              ),
-              'drawer',
-              rowIndex,
-            );
-            group.add(handle);
-          });
+          // 앞으로 열리는 구조에 맞게 손잡이를 서랍 전면 중앙에 배치한다.
+          const fullHandle = addClick(
+            makeMesh(
+              roundedBox(fullW * 0.32, 0.058, 0.038, 0.018),
+              new THREE.MeshStandardMaterial({
+                color: drawerHandleColors[rowIndex],
+                roughness: 0.72,
+                metalness: 0.03,
+              }),
+              0,
+              fullH * 0.34,
+              -fullD / 2 - 0.018,
+            ),
+            'drawer',
+            rowIndex,
+          );
+          group.add(fullHandle);
 
           const proxy = addClick(
             makeMesh(
@@ -1671,10 +1716,10 @@
           const group = new THREE.Group();
           group.position.set(side * (halfW / 2 + 0.07), y, -D / 2 + BACK_D / 2);
           group.userData.closedX = group.position.x;
-          group.userData.openX = group.position.x + side * halfW * 0.86;
+          group.userData.openX = group.userData.closedX;
           group.userData.targetX = group.userData.closedX;
           group.userData.closedZ = group.position.z;
-          group.userData.openZ = group.position.z;
+          group.userData.openZ = group.position.z - halfD * 0.78;
           group.userData.targetZ = group.userData.closedZ;
 
           addGlassWall(group, halfW, 0.022, halfD, 0, -halfH / 2, 0);
@@ -1720,17 +1765,18 @@
           group.add(sideCushionB);
 
           const drawerHandleColors = [0xf9cf58, 0x8ae2cf, 0xf6a7c1];
+          // 앞으로 여는 서랍처럼 각 하프 서랍의 전면 중앙에 작은 가로 손잡이를 둔다.
           const handle = addClick(
             makeMesh(
-              roundedBox(0.034, 0.22, 0.115, 0.018),
+              roundedBox(halfW * 0.42, 0.054, 0.036, 0.017),
               new THREE.MeshStandardMaterial({
                 color: drawerHandleColors[rowIndex],
                 roughness: 0.72,
                 metalness: 0.03,
               }),
-              side * (halfW / 2 + 0.018),
               0,
-              -halfD / 2 + 0.06,
+              halfH * 0.34,
+              -halfD / 2 - 0.017,
             ),
             'drawer',
             rowIndex,
